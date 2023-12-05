@@ -83,6 +83,8 @@ if __name__ == '__main__':
     input_data = get_input(day=1, test_data=False)
     
     # solve
+    # part a
     # get_digit(input_data)
+
+    # part b
     get_digit_word(input_data)
-    # get_digit_word('9gxfxdtcv')
