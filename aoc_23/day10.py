@@ -2,6 +2,7 @@
 day 10
 """
 
+import operator
 from queue import Queue
 from utils import get_input
 
@@ -10,89 +11,68 @@ def map_board(data):
     """map board with relevant rules"""
     board = data.strip().split()
     # possible moves
-    n = {
-        "|": [(0, -1), (0, 1)],
-        "-": [(-1, 0), (1, 0)],
-        "L": [(0, -1), (1, 0)],
-        "J": [(0, -1), (-1, 0)],
-        "7": [(-1, 0), (0, 1)],
-        "F": [(1, 0), (0, 1)],
+    pipe_dir = {
+        "|": ["N", "S"],
+        "-": ["E", "W"],
+        "L": ["N", "E"],
+        "J": ["N", "W"],
+        "7": ["S", "W"],
+        "F": ["S", "E"],
     }
-    return board, n
+    delta_d = {"N": (-1, 0), "S": (1, 0), "E": (0, 1), "W": (0, -1)}
+    # n = {k: [delta_d[x] for x in v] for k, v in pipe_dir.items()}
+    return board, pipe_dir, delta_d
 
 
-def part_a(board, n):
+def part_a(board, pipe_dir, delta_d):
     """find max distance from start"""
     # find start
-    x, y = None, None
-    for yi, line in enumerate(board):
-        for xi, c in enumerate(line):
-            if c == "S":
-                x, y = xi, yi
-                break
-    print(f"Start loc {x,y}")
+    start_pos = [(r, c) for r, row in enumerate(board) for c, x in enumerate(row) if x == "S"][0]
+    print(f"Start loc {start_pos}")
 
     # explore moves
-    # using a queue follows first in first out
-    possible_moves = Queue()
-    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-        c = board[y + dy][x + dx]
-        if c in n:
-            for dx2, dy2 in n[c]:
-                # check if the move is valid
-                if x == x + dx + dx2 and y == y + dy + dy2:
-                    possible_moves.put((1, (x + dx, y + dy)))
-
-    dists = {(x, y): 0}
-
-    # get valid positions and distance
-    while not possible_moves.empty():
-        d, (x, y) = possible_moves.get()
-        if (x, y) in dists:
-            continue
-        # append distance
-        dists[(x, y)] = d
-        # add to total distance
-        if board[y][x] in n.keys():
-            for dx, dy in n[board[y][x]]:
-                possible_moves.put((d + 1, (x + dx, y + dy)))
-
-    print(f"Max distance: {max(dists.values())}")
-    return dists
+    prev_pos = start_pos
+    path = []
+    path.append(start_pos)
+    pos = tuple(map(operator.add, prev_pos, delta_d["E"]))
+    cnt = 1
+    while pos != start_pos:
+        path.append(pos)
+        pipe = board[pos[0]][pos[1]]
+        if pipe == "S":
+            print(f"Back to start {pos}")
+            break
+        pos, prev_pos = move(pos, pipe, prev_pos, pipe_dir, delta_d)
+        cnt += 1
+    print(f"Max distance: {cnt // 2}")
+    return cnt//2, path
 
 
-def part_b(board, dists):
-    """find number of enclosed areas"""
-    # board size
-    w = len(board[0])
-    h = len(board)
+def move(pos, dirs, prev_pos, pipe_dir, delta_d):
+    orig_pos = pos
+    potential = []
+    for d in pipe_dir[dirs]:
+        potential.append(tuple(map(operator.add, pos, delta_d[d])))
+    pos = [p for p in potential if p != prev_pos][0]
+    return pos, orig_pos
 
-    inside_count = 0
-    # make a copy of board with all .
-    board_copy = "." * w
-    board_copy = [board_copy] * h
-    for y, line in enumerate(board):
-        for x, c in enumerate(line):
-            if (x, y) in dists:
-                continue
+def part_b(board, pipe_dir, delta_d, path):
+    # Shoelace formula
+    # https://en.wikipedia.org/wiki/Shoelace_formula
+    def shoelace_area(points):
+        n = len(points)
+        res = 0
+        for i in range(n):
+            x1, y1 = points[i]
+            x2, y2 = points[(i + 1) % n]
+            res += x1 * y2 - x2 * y1
+        return abs(res // 2)
 
-            crosses = 0
-            x2, y2 = x, y
-
-            while x2 < w and y2 < h:
-                c2 = board[y2][x2]
-                if (x2, y2) in dists and c2 != "L" and c2 != "7":
-                    board_copy[y2] = (
-                        board_copy[y2][:x2] + "X" + board_copy[y2][x2 + 1 :]
-                    )
-                    crosses += 1
-                x2 += 1
-                y2 += 1
-
-            if crosses % 2 == 1:
-                inside_count += 1
-
-    print(f"Inside count: {inside_count}")
+    # Pick's theorem
+    # https://en.wikipedia.org/wiki/Pick%27s_theorem
+    b, path = part_a(board, pipe_dir, delta_d)
+    i = shoelace_area(path) - b + 1
+    return i
 
 
 # main
@@ -103,8 +83,9 @@ if __name__ == "__main__":
     data = get_input(day=day, test_data=False)
 
     # part a
-    board, n = map_board(data)
-    dists = part_a(board, n)
+    board, pipe_dir, delta_d = map_board(data)
+    path = part_a(board, pipe_dir, delta_d)
 
     # part b
-    part_b(board, dists)
+    enclosed_points = part_b(board, pipe_dir, delta_d, path)
+    print(f"Enclosed points: {enclosed_points}")
