@@ -1,5 +1,5 @@
-## Advent of Code 2023
-Solving AOC 2023 in Python. Data is stored in `data/` and solutions are in `aoc_23/`.
+## Advent of Code
+Solving AOC in Python. Data is stored in `data/` and solutions are in `aoc_xx/`.
 
 ### Best things I've leanred
 - [Reduce](https://docs.python.org/3/library/functools.html/) - Apply function of two arguments cumulatively to the items of iterable, from left to right, so as to reduce the iterable to a single value.
